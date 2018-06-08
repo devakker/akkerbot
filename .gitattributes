@@ -3,6 +3,7 @@
 
 botconfig.json merge=ours
 .gitignore merge=ours
+
 Pipfile merge=ours
 Pipfile.lock merge=ours
 Procfile merge=ours
