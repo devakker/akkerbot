@@ -1,0 +1,13 @@
+{
+  "reddit":
+  {
+      "client_id": "Uq_p_pV777sB9Q",
+      "secret": "Bd48Nv58a55p3G5DMVDkHVR3uoI",
+      "redirect_uri": "http://localhost:8080",
+      "user_agent": "dumbot (by /u/spinakkerDota)"
+  },
+  "discord":
+  {
+    "token": "NDU0Mzg0MTM0ODMyMjU5MDc1.DfyO5g.Wjw_nQhYzmGDDNdhpibhQNZnYLI"
+  }
+}
