@@ -3,3 +3,10 @@
 
 botconfig.json merge=ours
 .gitignore merge=ours
+Pipfile merge=ours
+Pipfile.lock merge=ours
+Procfile merge=ours
+Procfile.windows merge=ours
+proj.sublime-project merge=ours
+reddittest.py merge=ours
+temp/.gitignore merge=ours
