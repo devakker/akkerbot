@@ -13,12 +13,17 @@ import json
 import urllib.request
 import urllib.parse
 
+# for the pictures
 import hashlib
 import sys
 import os
 import errno
 
+# for bitcoin
 import aiohttp
+
+# for a lot of things
+import random
 
 
 class RedditConfigData:
@@ -212,6 +217,23 @@ async def pics(ctx, subreddits = "pics", limit = 5):
 
             await bot.send_file(ctx.message.channel, filename)
             os.remove(filename)
+
+
+@bot.command(name='8ball',
+                description="Answers a yes/no question.",
+                brief="Answers from the beyond.",
+                aliases=['eight_ball', 'eightball', '8-ball'],
+                pass_context=True)
+async def eight_ball(context):
+    possible_responses = [
+        'That is a resounding no',
+        'It is not looking likely',
+        'Too hard to tell',
+        'It is quite possible',
+        'Definitely',
+    ]
+    await bot.say(random.choice(possible_responses) + ", " + context.message.author.mention)
+
 
 @bot.event
 async def on_command_completion(command, ctx):
