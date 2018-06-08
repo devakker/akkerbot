@@ -192,8 +192,6 @@ async def on_ready():
     await bot.change_presence(game=Game(name="with humans"))
 
 
-
-
 @bot.command()
 async def bitcoin():
     url = 'https://api.coindesk.com/v1/bpi/currentprice/BTC.json'
