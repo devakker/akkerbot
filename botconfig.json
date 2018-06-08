@@ -1,0 +1,13 @@
+{
+  "reddit":
+  {
+      "client_id": "",
+      "secret": "",
+      "redirect_uri": "",
+      "user_agent": ""
+  },
+  "discord":
+  {
+    "token": ""
+  }
+}
