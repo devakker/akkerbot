@@ -1,0 +1,8 @@
+Procfile
+Procfile.windows
+Pipfile.lock
+
+/temp/
+
+*.sublime-workspace
+*.sublime-project
