@@ -166,7 +166,11 @@ async def bitcoin():
         await bot.say("Bitcoin price is: $" + response['bpi']['USD']['rate'])
 
 
-@bot.command(pass_context=True)
+@bot.command(name='pics',
+             description="Fetches posts containing a single image from reddit.",
+             brief="Picture poster",
+             aliases=['getpics','redditpics'],
+             pass_context=True)
 async def pics(ctx, subreddits = "pics", limit = 5):
     fileNames = getPicsFromReddit(subreddits, limit)
 
