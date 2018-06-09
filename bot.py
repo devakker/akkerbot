@@ -191,7 +191,9 @@ async def eight_ball(context):
         'It is quite possible',
         'Definitely',
     ]
-    await bot.say(random.choice(possible_responses) + ", " + context.message.author.mention)
+    question = context.message.author.mention + " asks: " + "**" + context.message.content[7:] + "**"
+    answer = "\n ..my answer is: *" + random.choice(possible_responses) + "*"
+    await bot.say(question + answer)
 
 
 @bot.event
