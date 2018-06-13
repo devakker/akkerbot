@@ -25,6 +25,34 @@ import aiohttp
 # for a lot of things
 import random
 
+# obviously logging
+import logging
+
+
+def initLogging():
+    global myLogger
+    myLogger = logging.getLogger('akkerbot')
+    myLogger.setLevel(logging.DEBUG)
+    # formatter for both handlers
+    formatter = logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s')
+    # log to file above DEBUG
+    fileHandler = logging.FileHandler(filename='bot.log', encoding='utf-8', mode='w')
+    fileHandler.setLevel(logging.DEBUG)
+    fileHandler.setFormatter(formatter)
+    # log to stdout above INFO
+    consoleHandler = logging.StreamHandler()
+    consoleHandler.setLevel(logging.INFO)
+    consoleHandler.setFormatter(formatter)
+    # add both
+    myLogger.addHandler(fileHandler)
+    myLogger.addHandler(consoleHandler)
+
+    mainLogger = logging.getLogger('discord')
+    mainLogger.propagate = False
+    mainLogger.setLevel(logging.DEBUG)
+    mainLogger.addHandler(fileHandler)
+    mainLogger.addHandler(consoleHandler)
+
 
 class RedditConfigData:
     client_id = ""
@@ -42,7 +70,7 @@ alreadyPosted = set()
 
 user_agent = "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.0.7) Gecko/2009021910 Firefox/3.0.7"
 
-def initializeConfig():
+def readConfig():
     with open('botconfig.json') as data_file:
         config_file = json.load(data_file)
 
@@ -74,7 +102,7 @@ def createHash(hashThisString):
 
 
 def getPicsFromReddit(subs, picLimit):
-    print("Fetching " + str(picLimit) + " pictures from " + subs)
+    myLogger.info("Fetching " + str(picLimit) + " pictures from " + subs)
 
     submissions = reddit.subreddit(subs).hot(limit = 50)
 
@@ -96,10 +124,10 @@ def getPicsFromReddit(subs, picLimit):
             try:
                 urllib.request.urlretrieve(submission.url, filename)
             except urllib.error.HTTPError:
-                print ('Could not download: ', submission.url)
+                myLogger.warning ('Could not download: ', submission.url)
 
             alreadyPosted.add (md5)
-            print("New picture found: " + submission.title)
+            myLogger.info("New picture found: " + submission.title)
             numberOfPicsFound = numberOfPicsFound + 1
             fileNames.append (filename)
 
@@ -107,7 +135,7 @@ def getPicsFromReddit(subs, picLimit):
             break
 
     if numberOfPicsFound != picLimit:
-        print("Only found " + str(numberOfPicsFound) + " pictures.")
+        myLogger.warning("Only found " + str(numberOfPicsFound) + " pictures.")
         # let the caller know especially if 0
 
     return fileNames
@@ -115,11 +143,7 @@ def getPicsFromReddit(subs, picLimit):
 
 @bot.event
 async def on_ready():
-    print('Logged into Discord as')
-    print(bot.user.name)
-    print(bot.user.id)
-    print('------')
-
+    myLogger.info('Logged into Discord as ' + bot.user.name + " ---- id: " + bot.user.id)
     await bot.change_presence(game=Game(name="with humans"))
 
 
@@ -143,7 +167,7 @@ async def pics(ctx, subreddits = "pics", limit = 5):
 
     for filename in fileNames:
         if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
-            print("Sending picture " + filename +"..")
+            myLogger.info("Sending picture " + filename +"..")
 
             await bot.send_file(ctx.message.channel, filename)
             os.remove(filename)
@@ -174,7 +198,8 @@ async def on_command_completion(command, ctx):
 
 ### here we go
 
-initializeConfig()
+readConfig()
+initLogging()
 
 reddit = praw.Reddit(client_id=RedditConfigData.client_id,
                      client_secret=RedditConfigData.secret,
