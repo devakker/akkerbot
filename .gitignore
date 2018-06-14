@@ -2,3 +2,5 @@
 *.sublime-workspace
 
 /.idea/
+*.log
+loggingtest.py
