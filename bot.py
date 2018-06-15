@@ -18,10 +18,6 @@ from discord.ext import commands
 from reddit import Reddit
 
 
-# communicate with Reddit API
-# url handler
-
-
 def initLogging():
     global logger
     logger = logging.getLogger(__name__)
@@ -100,7 +96,6 @@ async def pics(context, subreddits="pics", limit=5):
             await bot.say(context.message.author.mention + " Found and posted " + str(imagesPosted) + answerHelper)
             return
     await bot.say(context.message.author.mention + " Only found " + str(imagesPosted) + answerHelper)
-
 
 
 @bot.command(name='8ball',
