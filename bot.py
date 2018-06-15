@@ -17,33 +17,28 @@ from discord.ext import commands
 # my own
 from reddit import Reddit
 
+global logger
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+# formatter for both handlers
+formatter = logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s')
+# log to file above DEBUG
+fileHandler = logging.FileHandler(filename='bot.log', encoding='utf-8', mode='w')
+fileHandler.setLevel(logging.DEBUG)
+fileHandler.setFormatter(formatter)
+# log to console above INFO
+consoleHandler = logging.StreamHandler()
+consoleHandler.setLevel(logging.INFO)
+consoleHandler.setFormatter(formatter)
+# add both
+logger.addHandler(fileHandler)
+logger.addHandler(consoleHandler)
 
-def initLogging():
-    global logger
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.DEBUG)
-    # formatter for both handlers
-    formatter = logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s')
-    # log to file above DEBUG
-    fileHandler = logging.FileHandler(filename='bot.log', encoding='utf-8', mode='w')
-    fileHandler.setLevel(logging.DEBUG)
-    fileHandler.setFormatter(formatter)
-    # log to console above INFO
-    consoleHandler = logging.StreamHandler()
-    consoleHandler.setLevel(logging.INFO)
-    consoleHandler.setFormatter(formatter)
-    # add both
-    logger.addHandler(fileHandler)
-    logger.addHandler(consoleHandler)
-
-    mainLogger = logging.getLogger('discord')
-    mainLogger.propagate = False
-    mainLogger.setLevel(logging.DEBUG)
-    mainLogger.addHandler(fileHandler)
-    mainLogger.addHandler(consoleHandler)
-
-
-discordToken = ""
+mainLogger = logging.getLogger('discord')
+mainLogger.propagate = False
+mainLogger.setLevel(logging.DEBUG)
+mainLogger.addHandler(fileHandler)
+mainLogger.addHandler(consoleHandler)
 
 description = '''Simple bot to post images from reddit automatically.'''
 bot = commands.Bot(command_prefix='!', description=description)
@@ -52,12 +47,16 @@ alreadyPosted = set()
 
 user_agent = "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.0.7) Gecko/2009021910 Firefox/3.0.7"
 
-def readConfig():
-    with open('botconfig.json') as data_file:
-        config_file = json.load(data_file)
+with open('botconfig.json') as data_file:
+    config_file = json.load(data_file)
 
-    global discordToken
-    discordToken = config_file["discord"]["token"]
+global discordToken
+discordToken = config_file["discord"]["token"]
+
+### here we go
+global reddit
+reddit = Reddit('botconfig.json')
+bot.run(discordToken)
 
 
 @bot.event
@@ -116,12 +115,4 @@ async def eight_ball(context):
     await bot.say(question + answer)
 
 
-### here we go
 
-readConfig()
-initLogging()
-global reddit
-reddit = Reddit('botconfig.json')
-
-
-bot.run(discordToken)
