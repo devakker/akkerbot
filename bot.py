@@ -116,11 +116,6 @@ async def eight_ball(context):
     await bot.say(question + answer)
 
 
-@bot.event
-async def on_command_completion(command, ctx):
-    await bot.delete_message(ctx.message)
-
-
 ### here we go
 
 readConfig()
