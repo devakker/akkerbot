@@ -13,6 +13,7 @@ import urllib.request
 import praw
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s')
 # log to file above DEBUG
 fileHandler = logging.FileHandler(filename='reddit.log', encoding='utf-8', mode='w')
@@ -75,5 +76,4 @@ class Reddit:
 
             self.alreadyPosted.add(md5)
             logger.info("New picture found: " + submission.title)
-
-        return filename
+            return filename

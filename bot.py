@@ -1,51 +1,44 @@
 
 # communication with the Discord API
-from discord.ext import commands
-from discord import Game
-
-# communicate with Reddit API
-import praw
-
 # config files
 import json
-
-# url handler
-import urllib.request
-import urllib.parse
-
+# obviously logging
+import logging
 # for the pictures
-import hashlib
-import sys
 import os
-import errno
-
-# for bitcoin
-import aiohttp
-
 # for a lot of things
 import random
 
-# obviously logging
-import logging
+# for bitcoin
+import aiohttp
+from discord import Game
+from discord.ext import commands
+
+# my own
+from reddit import Reddit
+
+
+# communicate with Reddit API
+# url handler
 
 
 def initLogging():
-    global myLogger
-    myLogger = logging.getLogger('akkerbot')
-    myLogger.setLevel(logging.DEBUG)
+    global logger
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.DEBUG)
     # formatter for both handlers
     formatter = logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s')
     # log to file above DEBUG
     fileHandler = logging.FileHandler(filename='bot.log', encoding='utf-8', mode='w')
     fileHandler.setLevel(logging.DEBUG)
     fileHandler.setFormatter(formatter)
-    # log to stdout above INFO
+    # log to console above INFO
     consoleHandler = logging.StreamHandler()
     consoleHandler.setLevel(logging.INFO)
     consoleHandler.setFormatter(formatter)
     # add both
-    myLogger.addHandler(fileHandler)
-    myLogger.addHandler(consoleHandler)
+    logger.addHandler(fileHandler)
+    logger.addHandler(consoleHandler)
 
     mainLogger = logging.getLogger('discord')
     mainLogger.propagate = False
@@ -143,7 +136,7 @@ def getPicsFromReddit(subs, picLimit):
 
 @bot.event
 async def on_ready():
-    myLogger.info('Logged into Discord as ' + bot.user.name + " ---- id: " + bot.user.id)
+    logger.info('Logged into Discord as ' + bot.user.name + " ---- id: " + bot.user.id)
     await bot.change_presence(game=Game(name="with humans"))
 
 
@@ -201,9 +194,5 @@ async def on_command_completion(command, ctx):
 readConfig()
 initLogging()
 
-reddit = praw.Reddit(client_id=RedditConfigData.client_id,
-                     client_secret=RedditConfigData.secret,
-                     redirect_uri=RedditConfigData.redirect_uri,
-                     user_agent=RedditConfigData.user_agent)
 
 bot.run(discordToken)
