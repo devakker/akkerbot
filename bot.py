@@ -47,13 +47,6 @@ def initLogging():
     mainLogger.addHandler(consoleHandler)
 
 
-class RedditConfigData:
-    client_id = ""
-    secret = ""
-    redirect_uri = ""
-    user_agent = ""
-
-
 discordToken = ""
 
 description = '''Simple bot to post images from reddit automatically.'''
@@ -69,69 +62,6 @@ def readConfig():
 
     global discordToken
     discordToken = config_file["discord"]["token"]
-
-    RedditConfigData.client_id = config_file["reddit"]["client_id"]
-    RedditConfigData.secret = config_file["reddit"]["secret"]
-    RedditConfigData.redirect_uri = config_file["reddit"]["redirect_uri"]
-    RedditConfigData.user_agent = config_file["reddit"]["user_agent"]
-
-
-def createSuperSub():
-    with open("sublist.json") as data_file:
-        configData = json.load(data_file)
-    combinedSubname = "\'"
-    for i in configData["subs"]:
-        combinedSubname += (i["name"]) + "+"
-    combinedSubname = combinedSubname[:-1]
-    combinedSubname += '\''
-    return combinedSubname
-
-
-def createHash(hashThisString):
-
-    md5 = hashlib.md5()
-    md5.update(hashThisString.encode('utf-8'))
-    return md5.hexdigest()
-
-
-def getPicsFromReddit(subs, picLimit):
-    myLogger.info("Fetching " + str(picLimit) + " pictures from " + subs)
-
-    submissions = reddit.subreddit(subs).hot(limit = 50)
-
-    numberOfPicsFound = 0
-    fileNames = []
-    for submission in submissions:
-
-        filename = os.path.join('temp', submission.url.split('/')[-1])
-
-        myopener = urllib.request.build_opener()
-        myopener.addheaders = [('User-Agent', user_agent)]
-        urllib.request.install_opener(myopener)
-
-        if not filename.lower().endswith(('.png', '.jpg', '.jpeg')):
-            continue
-
-        md5 = createHash(submission.url)
-        if md5 not in alreadyPosted:
-            try:
-                urllib.request.urlretrieve(submission.url, filename)
-            except urllib.error.HTTPError:
-                myLogger.warning ('Could not download: ', submission.url)
-
-            alreadyPosted.add (md5)
-            myLogger.info("New picture found: " + submission.title)
-            numberOfPicsFound = numberOfPicsFound + 1
-            fileNames.append (filename)
-
-        if numberOfPicsFound == picLimit:
-            break
-
-    if numberOfPicsFound != picLimit:
-        myLogger.warning("Only found " + str(numberOfPicsFound) + " pictures.")
-        # let the caller know especially if 0
-
-    return fileNames
 
 
 @bot.event
@@ -155,15 +85,22 @@ async def bitcoin():
              brief="Picture poster",
              aliases=['getpics','redditpics'],
              pass_context=True)
-async def pics(ctx, subreddits = "pics", limit = 5):
-    fileNames = getPicsFromReddit(subreddits, limit)
+async def pics(context, subreddits="pics", limit=5):
+    answerHelper = " pictures from **" + subreddits + "**."
 
-    for filename in fileNames:
-        if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
-            myLogger.info("Sending picture " + filename +"..")
-
-            await bot.send_file(ctx.message.channel, filename)
+    submissions = reddit.client.subreddit(subreddits).hot(limit=50)
+    imagesPosted = 0
+    for submission in submissions:
+        filename = reddit.downloadImageFromSubmission(submission)
+        if filename:
+            await bot.send_file(context.message.channel, filename)
             os.remove(filename)
+            imagesPosted = imagesPosted + 1
+        if imagesPosted == limit:
+            await bot.say(context.message.author.mention + " Found and posted " + str(imagesPosted) + answerHelper)
+            return
+    await bot.say(context.message.author.mention + " Only found " + str(imagesPosted) + answerHelper)
+
 
 
 @bot.command(name='8ball',
@@ -193,6 +130,8 @@ async def on_command_completion(command, ctx):
 
 readConfig()
 initLogging()
+global reddit
+reddit = Reddit('botconfig.json')
 
 
 bot.run(discordToken)
