@@ -4,3 +4,4 @@
 /.idea/
 *.log
 loggingtest.py
+/__pycache__/
