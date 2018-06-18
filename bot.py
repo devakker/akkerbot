@@ -19,6 +19,7 @@ from discord.ext import commands
 # my own
 from reddit import Reddit
 
+#bonk
 
 class PicturePostingTask:
     class TimePerDay(Enum):
