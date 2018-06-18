@@ -113,7 +113,7 @@ async def sendPics(limit, channel, subreddits):
     return imagesPosted
 
 
-async def PicturePostingTask(subreddits, numberOfPicturesToPost, targetChannel, periodInHours):
+async def picturePostingTask(subreddits, numberOfPicturesToPost, targetChannel, periodInHours):
     if periodInHours > 0.1:
         periodInSeconds = periodInHours * 3600
     else:
@@ -128,7 +128,7 @@ async def PicturePostingTask(subreddits, numberOfPicturesToPost, targetChannel, 
 @bot.command(name='schedule',
              pass_context=True)
 async def schedulePostingFromReddit(context, whichSubs, howOftenInHours:float, howMany:int = 3):
-    bot.loop.create_task(PicturePostingTask(subreddits=whichSubs, numberOfPicturesToPost=howMany,
+    bot.loop.create_task(picturePostingTask(subreddits=whichSubs, numberOfPicturesToPost=howMany,
                                                 targetChannel=context.message.channel, periodInHours=howOftenInHours))
 
 
