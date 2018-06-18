@@ -1,0 +1,8 @@
+
+# IDE related
+/__pycache__/
+/.idea/
+*.sublime-workspace
+
+# 
+*.log
