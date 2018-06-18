@@ -172,17 +172,12 @@ async def eightHourTasks():
         await asyncio.sleep(28800)
 
 
-with open('botconfig.json') as data_file:
-    config_file = json.load(data_file)
-
-global discordToken
-discordToken = config_file["discord"]["token"]
-
 ### here we go
-global reddit
-reddit = Reddit('botconfig.json')
 
 bot.loop.create_task(dailyTasks())
 bot.loop.create_task(twelveHourTasks())
 bot.loop.create_task(eightHourTasks())
-bot.run(discordToken)
+
+global reddit
+reddit = Reddit()
+bot.run(os.environ['discordToken'])

@@ -29,21 +29,18 @@ logger.addHandler(consoleHandler)
 
 
 class RedditConfig:
-    def __init__(self, configFile):
-        with open(configFile) as data_file:
-            config_file = json.load(data_file)
-
-        self.client_id = config_file["reddit"]["client_id"]
-        self.secret = config_file["reddit"]["secret"]
-        self.redirect_uri = config_file["reddit"]["redirect_uri"]
-        self.user_agent = config_file["reddit"]["user_agent"]
+    def __init__(self):
+        self.client_id = os.environ['reddit_clientID']
+        self.secret = os.environ['reddit_clientSecret']
+        self.redirect_uri = "http://localhost:8080"
+        self.user_agent = "dumbot (by /u/spinakkerDota)"
 
 
 class Reddit:
     userAgent = "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.0.7) Gecko/2009021910 Firefox/3.0.7"
 
-    def __init__(self, configFile):
-        self.config = RedditConfig(configFile)
+    def __init__(self):
+        self.config = RedditConfig()
 
         self.client = praw.Reddit(client_id=self.config.client_id,
                              client_secret=self.config.secret,

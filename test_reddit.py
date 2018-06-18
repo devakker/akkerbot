@@ -6,7 +6,7 @@ from reddit import Reddit
 
 class ConfigTestCase(unittest.TestCase):
     def setUp(self):
-        self.reddit = Reddit('botconfig.json')
+        self.reddit = Reddit()
 
     def test_haveConfig(self):
         """
@@ -35,7 +35,7 @@ class ConfigTestCase(unittest.TestCase):
 
 class PostCollectorTestCase(unittest.TestCase):
     def setUp(self):
-        self.reddit = Reddit('botconfig.json')
+        self.reddit = Reddit()
         self.somePost = self.reddit.client.submission(id='8reg0o')
 
     def test_downloadImageFromSubmission(self):
