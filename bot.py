@@ -19,23 +19,6 @@ from discord.ext import commands
 # my own
 from reddit import Reddit
 
-#bonk
-
-class PicturePostingTask:
-    class TimePerDay(Enum):
-        once = 1
-        twice = 2
-        thrice = 3
-
-    def __init__(self, subs, howOften, howMany, whichChannel):
-        self.subs = subs
-        self.timePerDay = howOften
-        self.numberOfPicturesToPost = howMany
-        self.targetChannel = whichChannel
-
-
-global picturePostingTasks
-picturePostingTasks = []
 
 global logger
 logger = logging.getLogger(__name__)
@@ -66,7 +49,6 @@ bot = commands.Bot(command_prefix='!', description=description)
 alreadyPosted = set()
 
 user_agent = "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.0.7) Gecko/2009021910 Firefox/3.0.7"
-
 
 
 @bot.event
@@ -131,53 +113,26 @@ async def sendPics(limit, channel, subreddits):
     return imagesPosted
 
 
+async def PicturePostingTask(subreddits, numberOfPicturesToPost, targetChannel, periodInHours):
+    if periodInHours > 0.1:
+        periodInSeconds = periodInHours * 3600
+    else:
+        periodInSeconds = 360
+
+    await bot.wait_until_ready()
+    while not bot.is_closed:
+        await sendPics(numberOfPicturesToPost, targetChannel, subreddits)
+        await asyncio.sleep(periodInSeconds)
+
+
 @bot.command(name='schedule',
              pass_context=True)
-async def schedulePostingFromReddit(context, subs, limit=3, howOften='once'):
-    if howOften == 'once':
-        picturePostingTasks.append(
-            PicturePostingTask(subs, PicturePostingTask.TimePerDay.once, limit, whichChannel=context.message.channel))
-    elif howOften == 'twice':
-        picturePostingTasks.append(
-            PicturePostingTask(subs, PicturePostingTask.TimePerDay.twice, limit, whichChannel=context.message.channel))
-    elif howOften == 'thrice':
-        picturePostingTasks.append(
-            PicturePostingTask(subs, PicturePostingTask.TimePerDay.thrice, limit, whichChannel=context.message.channel))
+async def schedulePostingFromReddit(context, whichSubs, howOftenInHours:float, howMany:int = 3):
+    bot.loop.create_task(PicturePostingTask(subreddits=whichSubs, numberOfPicturesToPost=howMany,
+                                                targetChannel=context.message.channel, periodInHours=howOftenInHours))
 
-
-async def dailyTasks():
-    await bot.wait_until_ready()
-    while not bot.is_closed:
-        for task in picturePostingTasks:
-            if task.timePerDay == PicturePostingTask.TimePerDay.once:
-                await sendPics(task.numberOfPicturesToPost, task.targetChannel, task.subs)
-        await asyncio.sleep(86400)
-
-
-async def twelveHourTasks():
-    await bot.wait_until_ready()
-    while not bot.is_closed:
-        for task in picturePostingTasks:
-            if task.timePerDay == PicturePostingTask.TimePerDay.twice:
-                await sendPics(task.numberOfPicturesToPost, task.targetChannel, task.subs)
-        await asyncio.sleep(43200)
-
-
-async def eightHourTasks():
-    await bot.wait_until_ready()
-    while not bot.is_closed:
-        for task in picturePostingTasks:
-            if task.timePerDay == PicturePostingTask.TimePerDay.thrice:
-                await sendPics(task.numberOfPicturesToPost, task.targetChannel, task.subs)
-        await asyncio.sleep(28800)
-
-
-### here we go
-
-bot.loop.create_task(dailyTasks())
-bot.loop.create_task(twelveHourTasks())
-bot.loop.create_task(eightHourTasks())
 
 global reddit
 reddit = Reddit()
 bot.run(os.environ['discordToken'])
+
