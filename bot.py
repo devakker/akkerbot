@@ -1,39 +1,63 @@
 
 # communication with the Discord API
-from discord.ext import commands
-from discord import Game
-
-# communicate with Reddit API
-import praw
-
 # config files
+import asyncio
 import json
-
-# url handler
-import urllib.request
-import urllib.parse
-
+# obviously logging
+import logging
 # for the pictures
-import hashlib
-import sys
 import os
-import errno
+# for a lot of things
+import random
+from enum import Enum
 
 # for bitcoin
 import aiohttp
+from discord import Game
+from discord.ext import commands
 
-# for a lot of things
-import random
-
-
-class RedditConfigData:
-    client_id = ""
-    secret = ""
-    redirect_uri = ""
-    user_agent = ""
+# my own
+from reddit import Reddit
 
 
-discordToken = ""
+class PicturePostingTask:
+    class TimePerDay(Enum):
+        once = 1
+        twice = 2
+        thrice = 3
+
+    def __init__(self, subs, howOften, howMany, whichChannel):
+        self.subs = subs
+        self.timePerDay = howOften
+        self.numberOfPicturesToPost = howMany
+        self.targetChannel = whichChannel
+
+
+global picturePostingTasks
+picturePostingTasks = []
+
+global logger
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+# formatter for both handlers
+formatter = logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s')
+# log to file above DEBUG
+fileHandler = logging.FileHandler(filename='bot.log', encoding='utf-8', mode='w')
+fileHandler.setLevel(logging.DEBUG)
+fileHandler.setFormatter(formatter)
+# log to console above INFO
+consoleHandler = logging.StreamHandler()
+consoleHandler.setLevel(logging.INFO)
+consoleHandler.setFormatter(formatter)
+# add both
+logger.addHandler(fileHandler)
+logger.addHandler(consoleHandler)
+
+mainLogger = logging.getLogger('discord')
+mainLogger.propagate = False
+mainLogger.setLevel(logging.DEBUG)
+mainLogger.addHandler(fileHandler)
+mainLogger.addHandler(consoleHandler)
 
 description = '''Simple bot to post images from reddit automatically.'''
 bot = commands.Bot(command_prefix='!', description=description)
@@ -42,117 +66,11 @@ alreadyPosted = set()
 
 user_agent = "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.0.7) Gecko/2009021910 Firefox/3.0.7"
 
-ERROR_INVALID_NAME = 123
-def is_pathname_valid(pathname: str) -> bool:
-
-    try:
-        if not isinstance(pathname, str) or not pathname:
-            return False
-
-        _, pathname = os.path.splitdrive(pathname)
-        root_dirname = os.environ.get('HOMEDRIVE', 'C:') \
-            if sys.platform == 'win32' else os.path.sep
-        assert os.path.isdir(root_dirname)
-        root_dirname = root_dirname.rstrip(os.path.sep) + os.path.sep
-        for pathname_part in pathname.split(os.path.sep):
-            try:
-                os.lstat(root_dirname + pathname_part)
-
-            except OSError as exc:
-                if hasattr(exc, 'winerror'):
-                    if exc.winerror == ERROR_INVALID_NAME:
-                        return False
-                elif exc.errno in {errno.ENAMETOOLONG, errno.ERANGE}:
-                    return False
-
-    except TypeError as exc:
-        return False
-
-    else:
-        return True
-
-
-def initializeConfig():
-    with open('botconfig.json') as data_file:
-        config_file = json.load(data_file)
-
-    global discordToken
-    discordToken = config_file["discord"]["token"]
-
-    RedditConfigData.client_id = config_file["reddit"]["client_id"]
-    RedditConfigData.secret = config_file["reddit"]["secret"]
-    RedditConfigData.redirect_uri = config_file["reddit"]["redirect_uri"]
-    RedditConfigData.user_agent = config_file["reddit"]["user_agent"]
-
-
-def createSuperSub():
-    with open("sublist.json") as data_file:
-        configData = json.load(data_file)
-    combinedSubname = "\'"
-    for i in configData["subs"]:
-        combinedSubname += (i["name"]) + "+"
-    combinedSubname = combinedSubname[:-1]
-    combinedSubname += '\''
-    return combinedSubname
-
-
-def createHash(hashThisString):
-
-    md5 = hashlib.md5()
-    md5.update(hashThisString.encode('utf-8'))
-    return md5.hexdigest()
-
-
-def getPicsFromReddit(subs, picLimit):
-    print("Fetching " + str(picLimit) + " pictures from " + subs)
-
-    submissions = reddit.subreddit(subs).hot(limit = 50)
-
-    numberOfPicsFound = 0
-    fileNames = []
-    for submission in submissions:
-
-        filename = os.path.join('temp', submission.url.split('/')[-1])
-
-        myopener = urllib.request.build_opener()
-        myopener.addheaders = [('User-Agent', user_agent)]
-        urllib.request.install_opener(myopener)
-
-        if not filename.lower().endswith(('.png', '.jpg', '.jpeg')):
-            continue
-
-        if not is_pathname_valid(filename):
-            continue
-
-        md5 = createHash(submission.url)
-        if md5 not in alreadyPosted:
-            try:
-                urllib.request.urlretrieve(submission.url, filename)
-            except urllib.error.HTTPError:
-                print ('Could not download: ', submission.url)
-
-            alreadyPosted.add (md5)
-            print("New picture found: " + submission.title)
-            numberOfPicsFound = numberOfPicsFound + 1
-            fileNames.append (filename)
-
-        if numberOfPicsFound == picLimit:
-            break
-
-    if numberOfPicsFound != picLimit:
-        print("Only found " + str(numberOfPicsFound) + " pictures.")
-        # let the caller know especially if 0
-
-    return fileNames
 
 
 @bot.event
 async def on_ready():
-    print('Logged into Discord as')
-    print(bot.user.name)
-    print(bot.user.id)
-    print('------')
-
+    logger.info('Logged into Discord as ' + bot.user.name + " ---- id: " + bot.user.id)
     await bot.change_presence(game=Game(name="with humans"))
 
 
@@ -171,15 +89,13 @@ async def bitcoin():
              brief="Picture poster",
              aliases=['getpics','redditpics'],
              pass_context=True)
-async def pics(ctx, subreddits = "pics", limit = 5):
-    fileNames = getPicsFromReddit(subreddits, limit)
-
-    for filename in fileNames:
-        if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
-            print("Sending picture " + filename +"..")
-
-            await bot.send_file(ctx.message.channel, filename)
-            os.remove(filename)
+async def pics(context, subreddits="pics", limit=5):
+    answerHelper = " pictures from **" + subreddits + "**."
+    imagesPosted = await sendPics(limit, context.message.channel, subreddits)
+    if imagesPosted == limit:
+        await bot.say(context.message.author.mention + " Found and posted " + str(imagesPosted) + answerHelper)
+    else:
+        await bot.say(context.message.author.mention + " Only found " + str(imagesPosted) + answerHelper)
 
 
 @bot.command(name='8ball',
@@ -200,18 +116,72 @@ async def eight_ball(context):
     await bot.say(question + answer)
 
 
-@bot.event
-async def on_command_completion(command, ctx):
-    await bot.delete_message(ctx.message)
+async def sendPics(limit, channel, subreddits):
+    submissions = reddit.client.subreddit(subreddits).hot(limit=50)
+    imagesPosted = 0
+    for submission in submissions:
+        filename = reddit.downloadImageFromSubmission(submission)
+        if filename:
+            await bot.send_file(channel, filename)
+            os.remove(filename)
+            imagesPosted = imagesPosted + 1
+        if imagesPosted == limit:
+            break
+    return imagesPosted
 
+
+@bot.command(name='schedule',
+             pass_context=True)
+async def schedulePostingFromReddit(context, subs, limit=3, howOften='once'):
+    if howOften == 'once':
+        picturePostingTasks.append(
+            PicturePostingTask(subs, PicturePostingTask.TimePerDay.once, limit, whichChannel=context.message.channel))
+    elif howOften == 'twice':
+        picturePostingTasks.append(
+            PicturePostingTask(subs, PicturePostingTask.TimePerDay.twice, limit, whichChannel=context.message.channel))
+    elif howOften == 'thrice':
+        picturePostingTasks.append(
+            PicturePostingTask(subs, PicturePostingTask.TimePerDay.thrice, limit, whichChannel=context.message.channel))
+
+
+async def dailyTasks():
+    await bot.wait_until_ready()
+    while not bot.is_closed:
+        for task in picturePostingTasks:
+            if task.timePerDay == PicturePostingTask.TimePerDay.once:
+                await sendPics(task.numberOfPicturesToPost, task.targetChannel, task.subs)
+        await asyncio.sleep(86400)
+
+
+async def twelveHourTasks():
+    await bot.wait_until_ready()
+    while not bot.is_closed:
+        for task in picturePostingTasks:
+            if task.timePerDay == PicturePostingTask.TimePerDay.twice:
+                await sendPics(task.numberOfPicturesToPost, task.targetChannel, task.subs)
+        await asyncio.sleep(43200)
+
+
+async def eightHourTasks():
+    await bot.wait_until_ready()
+    while not bot.is_closed:
+        for task in picturePostingTasks:
+            if task.timePerDay == PicturePostingTask.TimePerDay.thrice:
+                await sendPics(task.numberOfPicturesToPost, task.targetChannel, task.subs)
+        await asyncio.sleep(28800)
+
+
+with open('botconfig.json') as data_file:
+    config_file = json.load(data_file)
+
+global discordToken
+discordToken = config_file["discord"]["token"]
 
 ### here we go
+global reddit
+reddit = Reddit('botconfig.json')
 
-initializeConfig()
-
-reddit = praw.Reddit(client_id=RedditConfigData.client_id,
-                     client_secret=RedditConfigData.secret,
-                     redirect_uri=RedditConfigData.redirect_uri,
-                     user_agent=RedditConfigData.user_agent)
-
+bot.loop.create_task(dailyTasks())
+bot.loop.create_task(twelveHourTasks())
+bot.loop.create_task(eightHourTasks())
 bot.run(discordToken)
