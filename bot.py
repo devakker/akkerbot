@@ -7,14 +7,16 @@ import json
 import logging
 # for the pictures
 import os
+import hashlib
+import urllib.request
 # for a lot of things
 import random
-from enum import Enum
 
 # for bitcoin
 import aiohttp
 from discord import Game
 from discord.ext import commands
+import discord
 
 # my own
 from reddit import Reddit
@@ -45,8 +47,6 @@ mainLogger.addHandler(consoleHandler)
 
 description = '''Simple bot to post images from reddit automatically.'''
 bot = commands.Bot(command_prefix='!', description=description)
-
-alreadyPosted = set()
 
 user_agent = "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.0.7) Gecko/2009021910 Firefox/3.0.7"
 
@@ -101,38 +101,110 @@ async def eight_ball(context):
 
 async def sendPics(limit, channel, subreddits):
     submissions = reddit.client.subreddit(subreddits).hot(limit=50)
-    imagesPosted = 0
+    images_posted = 0
     for submission in submissions:
-        filename = reddit.downloadImageFromSubmission(submission)
-        if filename:
-            await bot.send_file(channel, filename)
-            os.remove(filename)
-            imagesPosted = imagesPosted + 1
-        if imagesPosted == limit:
+        file_path = reddit.downloadImageFromSubmission(submission)
+        if file_path:
+            if channel.id not in PicSender.repost_cache:
+                PicSender.repost_cache[channel.id] = {}
+            picSender = PicSender(file_path)
+            try:
+                await picSender.send(channel)
+            except RuntimeError:
+                images_posted = images_posted - 1
+            os.remove(file_path)
+            images_posted = images_posted + 1
+        if images_posted == limit:
             break
-    return imagesPosted
+    return images_posted
 
 
-async def picturePostingTask(subreddits, numberOfPicturesToPost, targetChannel, periodInHours):
-    if periodInHours > 0.1:
-        periodInSeconds = periodInHours * 3600
+async def picture_posting_task(subreddits, number_of_pictures_to_post, target_channel, period_in_hours):
+    if period_in_hours > 0.1:
+        period_in_seconds = period_in_hours * 3600
     else:
-        periodInSeconds = 360
+        period_in_seconds = 360
 
     await bot.wait_until_ready()
     while not bot.is_closed:
-        await sendPics(numberOfPicturesToPost, targetChannel, subreddits)
-        await asyncio.sleep(periodInSeconds)
+        await sendPics(number_of_pictures_to_post, target_channel, subreddits)
+        await asyncio.sleep(period_in_seconds)
 
 
 @bot.command(name='schedule',
              pass_context=True)
-async def schedulePostingFromReddit(context, whichSubs, howOftenInHours:float, howMany:int = 3):
-    bot.loop.create_task(picturePostingTask(subreddits=whichSubs, numberOfPicturesToPost=howMany,
-                                                targetChannel=context.message.channel, periodInHours=howOftenInHours))
+async def schedule_posting_from_reddit(context, which_subs, how_often_in_hours:float, how_many:int = 3):
+    bot.loop.create_task(picture_posting_task(subreddits=which_subs, number_of_pictures_to_post=how_many,
+                                              target_channel=context.message.channel, period_in_hours=how_often_in_hours))
+    if context.message.channel.id not in PicSender.repost_cache:
+        PicSender.repost_cache[context.message.channel.id] = {}
 
+
+@bot.event
+async def check_if_repost(message):
+    if message.channel.id not in PicSender.repost_cache:
+        return
+    else:
+        channel_repost_cache = PicSender.repost_cache[message.channel.id]
+
+    if message.author == bot.user:
+        return
+
+    for attachment in message.attachments:
+        if not attachment['filename'].lower().endswith(('.png', '.jpg', '.jpeg')):
+            return
+        file_path = os.path.join('temp', attachment['filename'])
+
+        myopener = urllib.request.build_opener()
+        myopener.addheaders = [('User-Agent', user_agent)]
+        urllib.request.install_opener(myopener)
+        urllib.request.urlretrieve(attachment['url'], file_path)
+
+        file_hash = hash_file(file_path)
+        if file_hash not in channel_repost_cache:
+            channel_repost_cache[file_hash] = message
+
+        os.remove(file_path)
+
+
+@bot.event
+async def on_message(message: discord.Message):
+    await check_if_repost(message)
+    await bot.process_commands(message)
+
+
+def hash_file(file_path):
+    buf_size = 65536  # lets read stuff in 64kb chunks!
+    md5 = hashlib.md5()
+    with open(file_path, 'rb') as f:
+        while True:
+            data = f.read(buf_size)
+            if not data:
+                break
+            md5.update(data)
+    return md5.hexdigest()
+
+
+class PicSender:
+    repost_cache = {}
+
+    def __init__(self, file_path):
+        self.file_path = file_path
+        self.hash_of_image = hash_file(file_path)
+
+    async def send(self, target_channel: discord.Channel):
+        if target_channel.id in self.repost_cache:
+            channel_repost_cache = self.repost_cache[target_channel.id]
+            if self.hash_of_image in channel_repost_cache:
+                raise RuntimeError('repost, did not send')
+            else:
+                message = bot.send_file(target_channel, self.file_path)
+                await message
+                channel_repost_cache[self.hash_of_image] = message
+        else:
+            await bot.send_file(target_channel, self.file_path)
 
 global reddit
 reddit = Reddit()
-bot.run(os.environ['discordToken'])
 
+bot.run(os.environ['discordToken'])
