@@ -1,11 +1,11 @@
+import logging
 
 # communicate with API
 import praw
-
-import logging
+# to handle paths
 import os
+# to download files
 import urllib.parse
-# url handler
 import urllib.request
 
 
