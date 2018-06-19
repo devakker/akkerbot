@@ -74,7 +74,7 @@ async def bitcoin():
              pass_context=True)
 async def pics(context, subreddits="pics", limit=5):
     answerHelper = " pictures from **" + subreddits + "**."
-    imagesPosted = await sendPics(limit, context.message.channel, subreddits)
+    imagesPosted = await send_pics(limit, context.message.channel, subreddits)
     if imagesPosted == limit:
         await bot.say(context.message.author.mention + " Found and posted " + str(imagesPosted) + answerHelper)
     else:
@@ -82,10 +82,10 @@ async def pics(context, subreddits="pics", limit=5):
 
 
 @bot.command(name='8ball',
-                description="Answers a yes/no question.",
-                brief="Answers from the beyond.",
-                aliases=['eight_ball', 'eightball', '8-ball'],
-                pass_context=True)
+            description="Answers a yes/no question.",
+            brief="Answers from the beyond.",
+            aliases=['eight_ball', 'eightball', '8-ball'],
+            pass_context=True)
 async def eight_ball(context):
     possible_responses = [
         'That is a resounding no',
@@ -97,38 +97,6 @@ async def eight_ball(context):
     question = context.message.author.mention + " asks: " + "**" + context.message.content[7:] + "**"
     answer = "\n ..my answer is: *" + random.choice(possible_responses) + "*"
     await bot.say(question + answer)
-
-
-async def sendPics(limit, channel, subreddits):
-    submissions = reddit.client.subreddit(subreddits).hot(limit=50)
-    images_posted = 0
-    for submission in submissions:
-        file_path = reddit.downloadImageFromSubmission(submission)
-        if file_path:
-            if channel.id not in PicSender.repost_cache:
-                PicSender.repost_cache[channel.id] = {}
-            picSender = PicSender(file_path)
-            try:
-                await picSender.send(channel)
-            except RuntimeError:
-                images_posted = images_posted - 1
-            os.remove(file_path)
-            images_posted = images_posted + 1
-        if images_posted == limit:
-            break
-    return images_posted
-
-
-async def picture_posting_task(subreddits, number_of_pictures_to_post, target_channel, period_in_hours):
-    if period_in_hours > 0.1:
-        period_in_seconds = period_in_hours * 3600
-    else:
-        period_in_seconds = 360
-
-    await bot.wait_until_ready()
-    while not bot.is_closed:
-        await sendPics(number_of_pictures_to_post, target_channel, subreddits)
-        await asyncio.sleep(period_in_seconds)
 
 
 @bot.command(name='schedule',
@@ -173,6 +141,38 @@ async def on_message(message: discord.Message):
     await bot.process_commands(message)
 
 
+async def send_pics(limit, channel, subreddits):
+    submissions = reddit.client.subreddit(subreddits).hot(limit=50)
+    images_posted = 0
+    for submission in submissions:
+        file_path = reddit.downloadImageFromSubmission(submission)
+        if file_path:
+            if channel.id not in PicSender.repost_cache:
+                PicSender.repost_cache[channel.id] = {}
+            picSender = PicSender(file_path)
+            try:
+                await picSender.send(channel)
+            except RuntimeError:
+                images_posted = images_posted - 1
+            os.remove(file_path)
+            images_posted = images_posted + 1
+        if images_posted == limit:
+            break
+    return images_posted
+
+
+async def picture_posting_task(subreddits, number_of_pictures_to_post, target_channel, period_in_hours):
+    if period_in_hours > 0.1:
+        period_in_seconds = period_in_hours * 3600
+    else:
+        period_in_seconds = 360
+
+    await bot.wait_until_ready()
+    while not bot.is_closed:
+        await send_pics(number_of_pictures_to_post, target_channel, subreddits)
+        await asyncio.sleep(period_in_seconds)
+
+
 def hash_file(file_path):
     buf_size = 65536  # lets read stuff in 64kb chunks!
     md5 = hashlib.md5()
@@ -203,6 +203,7 @@ class PicSender:
                 channel_repost_cache[self.hash_of_image] = message
         else:
             await bot.send_file(target_channel, self.file_path)
+
 
 global reddit
 reddit = Reddit()
