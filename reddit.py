@@ -2,8 +2,6 @@
 # communicate with API
 import praw
 
-# config files
-import json
 import logging
 import os
 import urllib.parse
