@@ -23,7 +23,7 @@ class Members:
     @cool.command(name='bot')
     async def _bot(self):
         """Is the bot cool?"""
-        await self.bot.say(__name__)
+        await self.bot.say('Yes, the bot is cool.')
 
 
 def setup(bot):
