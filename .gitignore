@@ -1,6 +1,7 @@
 
 # IDE related
 /__pycache__/
+/cogs/__pycache__/
 /.idea/
 *.sublime-workspace
 

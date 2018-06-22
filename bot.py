@@ -12,6 +12,7 @@ import random
 
 # for bitcoin
 import aiohttp
+
 from discord import Game
 from discord.ext import commands
 import discord
@@ -39,11 +40,11 @@ mainLogger.setLevel(logging.DEBUG)
 mainLogger.addHandler(fileHandler)
 mainLogger.addHandler(consoleHandler)
 
+
 description = '''Simple bot to post images from reddit automatically.'''
 bot = commands.Bot(command_prefix='!', description=description)
 
-# cog rewrite
-
+extension_folder = 'cogs'
 startup_extensions = ['members', 'rng', 'pics']
 
 
@@ -86,7 +87,7 @@ async def bitcoin():
 if __name__ == "__main__":
     for extension in startup_extensions:
         try:
-            bot.load_extension(extension)
+            bot.load_extension(extension_folder + '.' + extension)
         except Exception as e:
             exc = '{}: {}'.format(type(e).__name__, e)
             print('Failed to load extension {}\n{}'.format(extension, exc))
