@@ -1,4 +1,3 @@
-
 import discord
 from discord.ext import commands
 
@@ -16,6 +15,8 @@ import asyncio
 
 class Pics:
     repost_cache = {}
+    tasks = {}
+
     user_agent = "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.0.7) Gecko/2009021910 Firefox/3.0.7"
 
     logger = logging.getLogger('akkerbot')
@@ -35,7 +36,8 @@ class Pics:
         answer_helper = " pictures from **" + subreddits + "**."
         images_posted = await self.send_pics(limit, context.message.channel, subreddits)
         if images_posted == limit:
-            await self.bot.say(context.message.author.mention + " Found and posted " + str(images_posted) + answer_helper)
+            await self.bot.say(
+                context.message.author.mention + " Found and posted " + str(images_posted) + answer_helper)
         else:
             await self.bot.say(context.message.author.mention + " Only found " + str(images_posted) + answer_helper)
 
@@ -45,9 +47,22 @@ class Pics:
         You can use periods like 0.11 hours, but 0.1 is the minimum"""
         await self.bot.say("I will post **" + str(how_many) + "** pictures from **r/" +
                            which_subs + "** every **" + str(how_often_in_hours) + "** hours.")
-        self.bot.loop.create_task(self.picture_posting_task(subreddits=which_subs, number_of_pictures_to_post=how_many,
-                                                            target_channel=context.message.channel,
-                                                            period_in_hours=how_often_in_hours))
+
+        task = self.bot.loop.create_task(
+            self.picture_posting_task(subreddits=which_subs, number_of_pictures_to_post=how_many,
+                                      target_channel=context.message.channel,
+                                      period_in_hours=how_often_in_hours))
+        task.subs = which_subs
+        task.limit = how_many
+        task.channel = context.message.channel
+        task.owner = context.message.author
+        task.period = how_often_in_hours
+
+        channel_id = context.message.channel.id
+        if channel_id not in self.tasks:
+            self.tasks[channel_id] = []
+
+        self.tasks[channel_id].append(task)
 
     async def on_message(self, message: discord.Message):
         if message.author != self.bot.user:
