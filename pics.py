@@ -34,8 +34,7 @@ class Pics:
         answer_helper = " pictures from **" + subreddits + "**."
         images_posted = await self.send_pics(limit, context.message.channel, subreddits)
         if images_posted == limit:
-            await self.bot.say(
-                context.message.author.mention + " Found and posted " + str(images_posted) + answer_helper)
+            await self.bot.say(context.message.author.mention + " Found and posted " + str(images_posted) + answer_helper)
         else:
             await self.bot.say(context.message.author.mention + " Only found " + str(images_posted) + answer_helper)
 
@@ -68,11 +67,10 @@ class Pics:
         submissions = self.redditClient.subreddit(subreddits).hot(limit=50)
         images_posted = 0
         for submission in submissions:
-            channel_repost_cache = {} #TODO is this needed?
-            if channel.id in self.repost_cache:
-                channel_repost_cache = self.repost_cache[channel.id]
-            else:
-                self.repost_cache[channel.id] = channel_repost_cache
+            if channel.id not in self.repost_cache:
+                self.repost_cache[channel.id] = {}
+            channel_repost_cache = self.repost_cache[channel.id]
+
             filename = submission.url.split('/')[-1].split('.')[0]
             if filename in channel_repost_cache:
                 continue
