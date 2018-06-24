@@ -11,6 +11,7 @@ import urllib.request
 import logging
 # scheduling
 import asyncio
+import datetime
 
 
 class Pics:
@@ -52,17 +53,48 @@ class Pics:
             self.picture_posting_task(subreddits=which_subs, number_of_pictures_to_post=how_many,
                                       target_channel=context.message.channel,
                                       period_in_hours=how_often_in_hours))
+        task.owner = context.message.author
+        task.channel = context.message.channel
         task.subs = which_subs
         task.limit = how_many
-        task.channel = context.message.channel
-        task.owner = context.message.author
         task.period = how_often_in_hours
 
         channel_id = context.message.channel.id
         if channel_id not in self.tasks:
-            self.tasks[channel_id] = []
+            self.tasks[channel_id] = {}
 
-        self.tasks[channel_id].append(task)
+        if task.owner not in self.tasks[channel_id]:
+            self.tasks[channel_id][task.owner] = []
+
+        self.tasks[channel_id][task.owner].append(task)
+
+    @commands.command(name='mytasks', pass_context=True)
+    async def list_users_running_tasks(self, context):
+        channel_id = context.message.channel.id
+        if channel_id not in self.tasks:
+            await self.bot.say("No tasks running in this channel.")
+            return
+
+        author = context.message.author
+        if author not in self.tasks[channel_id]:
+            await self.bot.say("You have no tasks running in this channel.")
+            return
+
+        user_tasks = self.tasks[channel_id][author]
+        embed = discord.Embed(title=f'{author}''s tasks running in this channel:', colour=discord.Colour(0xd000e6),
+                              timestamp=datetime.datetime.utcfromtimestamp(1529866412))
+        embed.set_footer(text=self.bot.user.name)
+        sub_field_helper = ''
+        limit_field_helper = ''
+        period_field_helper = ''
+        for task in user_tasks:
+            sub_field_helper = sub_field_helper + f'{task.subs}\n'
+            limit_field_helper = limit_field_helper + f'{task.limit}\n'
+            period_field_helper = period_field_helper + f'{task.period}\n'
+        embed.add_field(name='Subreddits', value=sub_field_helper, inline=True)
+        embed.add_field(name='Limit', value=limit_field_helper, inline=True)
+        embed.add_field(name='Period', value=period_field_helper, inline=True)
+        await self.bot.say(embed=embed)
 
     async def on_message(self, message: discord.Message):
         if message.author != self.bot.user:
