@@ -1,21 +1,16 @@
-# communication with the Discord API
-# config files
-import asyncio
-import json
+
 # obviously logging
 import logging
 # for the pictures
 import os
-import urllib.request
-# for a lot of things
-import random
 
 # for bitcoin
 import aiohttp
+import json
 
 from discord import Game
 from discord.ext import commands
-import discord
+
 
 global logger
 logger = logging.getLogger('akkerbot')
@@ -45,7 +40,7 @@ description = '''Simple bot to post images from reddit automatically.'''
 bot = commands.Bot(command_prefix='!', description=description)
 
 extension_folder = 'cogs'
-startup_extensions = ['members', 'rng', 'pics']
+startup_extensions = ['members', 'rng', 'pics', 'memes']
 
 
 @bot.command()
