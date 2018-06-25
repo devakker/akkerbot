@@ -15,6 +15,10 @@ class Memes:
 
     @commands.command(name='addmeme', pass_context=True)
     async def add(self, context, name):
+        if name in self.memes:
+            self.bot.say(f"Meme with the name **{name}** already exists.")
+            return
+
         message: discord.Message = context.message
         for attachment in message.attachments:
             filename = attachment['filename']
@@ -27,10 +31,10 @@ class Memes:
             try:
                 await download_image_from_url(url, file_path)
             except:
-                self.bot.say("Something is wrong with that meme :(")
+                await self.bot.say("Something is wrong with that meme :(")
 
-            if name not in self.memes:
-                self.memes[name] = file_path
+            self.memes[name] = file_path
+            await self.bot.say(f"Meme added as **{name}**.")
 
     @commands.command(pass_context=True)
     async def meme(self, context, name):
