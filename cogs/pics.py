@@ -54,9 +54,10 @@ class Pics:
         if author not in self.tasks[channel_id]:
             self.tasks[channel_id][author] = []
 
-        maximum_tasks_per_user = 9
-        if len(self.tasks[channel_id][author]) > maximum_tasks_per_user:
-            await self.bot.say(f'You have exceeded the max amount of tasks you can set ({maximum_tasks_per_user}).')
+        maximum_tasks_per_user = 5
+        if len(self.tasks[channel_id][author]) >= maximum_tasks_per_user:
+            await self.bot.say(f'You have exceeded the max amount of tasks you can set '
+                               f'in this channel ({maximum_tasks_per_user}).')
             return
 
         task = self.bot.loop.create_task(
