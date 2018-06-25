@@ -74,27 +74,51 @@ class Pics:
         if channel_id not in self.tasks:
             await self.bot.say("No tasks running in this channel.")
             return
-
         author = context.message.author
         if author not in self.tasks[channel_id]:
             await self.bot.say("You have no tasks running in this channel.")
             return
-
         user_tasks = self.tasks[channel_id][author]
+        if not user_tasks:
+            await self.bot.say("You have no tasks running in this channel.")
+            return
+
         embed = discord.Embed(title=f'{author}''s tasks running in this channel:', colour=discord.Colour(0xd000e6),
                               timestamp=datetime.datetime.utcfromtimestamp(1529866412))
         embed.set_footer(text=self.bot.user.name)
+        index_field_helper = ''
         sub_field_helper = ''
         limit_field_helper = ''
         period_field_helper = ''
-        for task in user_tasks:
+        for index, task in enumerate(user_tasks):
+            index_field_helper = index_field_helper + f'{index}\n'
             sub_field_helper = sub_field_helper + f'{task.subs}\n'
             limit_field_helper = limit_field_helper + f'{task.limit}\n'
             period_field_helper = period_field_helper + f'{task.period}\n'
+        embed.add_field(name='Index', value=index_field_helper, inline=True)
         embed.add_field(name='Subreddits', value=sub_field_helper, inline=True)
         embed.add_field(name='Limit', value=limit_field_helper, inline=True)
         embed.add_field(name='Period', value=period_field_helper, inline=True)
         await self.bot.say(embed=embed)
+
+    # TODO some code duplication here, should put task handling into a separate module
+    @commands.command(name='removetask', pass_context=True)
+    async def remove_user_task(self, context, task_index: int):
+        channel_id = context.message.channel.id
+        if channel_id not in self.tasks:
+            await self.bot.say("No tasks running in this channel.")
+            return
+        author = context.message.author
+        if author not in self.tasks[channel_id]:
+            await self.bot.say("You have no tasks running in this channel.")
+            return
+        user_tasks = self.tasks[channel_id][author]
+        try:
+            del user_tasks[task_index]
+        except IndexError:
+            await self.bot.say(f'No task with that index.')
+            return
+        await self.bot.say(f'Deleted task with index {task_index}.')
 
     async def on_message(self, message: discord.Message):
         if message.author != self.bot.user:
