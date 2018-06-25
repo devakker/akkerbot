@@ -31,7 +31,7 @@ class Memes:
     @commands.command(name='addmeme', pass_context=True)
     async def add(self, context, name):
         if name in self.memes:
-            self.bot.say(f"Meme with the name **{name}** already exists.")
+            await self.bot.say(f"Meme with the name **{name}** already exists.")
             return
 
         message: discord.Message = context.message
@@ -59,6 +59,15 @@ class Memes:
             await self.bot.say(f"Deleted the meme.")
         else:
             await self.bot.say(f"That meme doesn't exist. Perhaps you should add it!")
+
+    @commands.command(name='listmemes', pass_context=True)
+    async def list(self, context):
+        if not self.memes:
+            await self.bot.say(f"No memes have been added yet.")
+        response = '**Memes:** '
+        for name in self.memes:
+            response = response + f'{name}, '
+        await self.bot.say(response)
 
 
 def setup(bot):
