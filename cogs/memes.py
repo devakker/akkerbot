@@ -60,6 +60,7 @@ class Memes:
     async def list(self, context):
         if not self.memes:
             await self.bot.say(f"No memes have been added yet.")
+            return
         response = '**Memes:** '
         for name in self.memes:
             response = response + f'{name}, '
