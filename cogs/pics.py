@@ -150,7 +150,7 @@ class Pics:
 
             url = submission.url
             if not url.lower().endswith(('.png', '.jpg', '.jpeg')):
-                return
+                continue
 
             filename_no_extension = url.split('/')[-1].split('.')[0]
             if filename_no_extension in channel_repost_cache:
