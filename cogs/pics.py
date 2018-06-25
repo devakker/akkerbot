@@ -6,8 +6,7 @@ import praw
 # path handling
 import os
 # downloading files
-import urllib.parse
-import urllib.request
+import aiohttp
 import logging
 # scheduling
 import asyncio
@@ -155,7 +154,7 @@ class Pics:
             if filename in channel_repost_cache:
                 continue
 
-            file_path = self.download_image_from_submission(submission)
+            file_path = await self.download_image_from_submission(submission)
             if not file_path:
                 continue
 
@@ -168,22 +167,15 @@ class Pics:
                 break
         return images_posted
 
-    def download_image_from_submission(self, submission):
+    async def download_image_from_submission(self, submission):
         file_path = os.path.join('temp', submission.url.split('/')[-1])
 
-        myopener = urllib.request.build_opener()
-        myopener.addheaders = [('User-Agent', self.user_agent)]
-        urllib.request.install_opener(myopener)
+        async with aiohttp.ClientSession() as session:
+            async with session.get(submission.url) as resp:
+                test = await resp.read()
+                with open(file_path, "wb") as f:
+                    f.write(test)
 
-        if not file_path.lower().endswith(('.png', '.jpg', '.jpeg')):
-            return
-
-        try:
-            urllib.request.urlretrieve(submission.url, file_path)
-        except urllib.error.HTTPError:
-            self.logger.warning('Could not download: ', submission.url)
-
-        self.logger.info("New picture found: " + submission.title)
         return file_path
 
     def check_if_repost(self, message: discord.Message):
