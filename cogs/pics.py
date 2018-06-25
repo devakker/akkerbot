@@ -74,6 +74,7 @@ class Pics:
         await self.bot.say(
             f"I will post **{how_many}** picture(s) from **r/{which_subs}** every **{how_often_in_hours}** hours.")
 
+    # TODO description
     @commands.command(name='mytasks', pass_context=True)
     async def list_users_running_tasks(self, context):
         channel_id = context.message.channel.id
@@ -107,6 +108,7 @@ class Pics:
         embed.add_field(name='Period', value=period_field_helper, inline=True)
         await self.bot.say(embed=embed)
 
+    # TODO description
     # TODO some code duplication here, should put task handling into a separate module
     @commands.command(name='removetask', pass_context=True)
     async def remove_user_task(self, context, task_index: int):
