@@ -1,23 +1,21 @@
 import discord
 from discord.ext import commands
+import logging
 
 # communicate with API
 import praw
 # path handling
 import os
-# downloading files
-import aiohttp
-import logging
 # scheduling
 import asyncio
 import datetime
+# download images
+from utils import download_image_from_url
 
 
 class Pics:
     repost_cache = {}
     tasks = {}
-
-    user_agent = "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.0.7) Gecko/2009021910 Firefox/3.0.7"
 
     logger = logging.getLogger('akkerbot')
 
@@ -34,7 +32,7 @@ class Pics:
         Fetches posts directly linking to images from subreddits.
         You can combine subs too: awww+eyebleach"""
         answer_helper = " pictures from **" + subreddits + "**."
-        images_posted = await self.send_pics(limit, context.message.channel, subreddits)
+        images_posted = await self.post_pictures_from_reddit(limit, context.message.channel, subreddits)
         if images_posted == limit:
             await self.bot.say(
                 context.message.author.mention + " Found and posted " + str(images_posted) + answer_helper)
@@ -129,7 +127,7 @@ class Pics:
 
     async def on_message(self, message: discord.Message):
         if message.author != self.bot.user:
-            self.check_if_repost(message)
+            await self.check_if_repost(message)
 
     async def picture_posting_task(self, subreddits, number_of_pictures_to_post, target_channel, period_in_hours):
         if period_in_hours > 0.1:
@@ -139,46 +137,45 @@ class Pics:
 
         await self.bot.wait_until_ready()
         while not self.bot.is_closed:
-            await self.send_pics(number_of_pictures_to_post, target_channel, subreddits)
+            await self.post_pictures_from_reddit(number_of_pictures_to_post, target_channel, subreddits)
             await asyncio.sleep(period_in_seconds)
 
-    async def send_pics(self, limit, channel, subreddits):
+    async def post_pictures_from_reddit(self, limit, channel, subreddits):
         submissions = self.redditClient.subreddit(subreddits).hot(limit=50)
-        images_posted = 0
+        number_of_images_posted = 0
         for submission in submissions:
             if channel.id not in self.repost_cache:
                 self.repost_cache[channel.id] = {}
             channel_repost_cache = self.repost_cache[channel.id]
 
-            filename = submission.url.split('/')[-1].split('.')[0]
-            if filename in channel_repost_cache:
+            url = submission.url
+            if not url.lower().endswith(('.png', '.jpg', '.jpeg')):
+                return
+
+            filename_no_extension = url.split('/')[-1].split('.')[0]
+            if filename_no_extension in channel_repost_cache:
                 continue
 
-            file_path = await self.download_image_from_submission(submission)
-            if not file_path:
+            file_path = os.path.join('temp', url.split('/')[-1])
+            try:
+                await download_image_from_url(url, file_path)
+            except:  # TODO find what errors can this throw
                 continue
+
+            self.logger.info(f'New picture found: {submission.title}')
 
             message = await self.bot.send_file(channel, file_path)
-            channel_repost_cache[filename] = message
+            channel_repost_cache[filename_no_extension] = message
 
             os.remove(file_path)
-            images_posted = images_posted + 1
-            if images_posted == limit:
+            number_of_images_posted = number_of_images_posted + 1
+            if number_of_images_posted == limit:
                 break
-        return images_posted
+        return number_of_images_posted
 
-    async def download_image_from_submission(self, submission):
-        file_path = os.path.join('temp', submission.url.split('/')[-1])
+    # TODO this could be placed in an utils file
 
-        async with aiohttp.ClientSession() as session:
-            async with session.get(submission.url) as resp:
-                test = await resp.read()
-                with open(file_path, "wb") as f:
-                    f.write(test)
-
-        return file_path
-
-    def check_if_repost(self, message: discord.Message):
+    async def check_if_repost(self, message: discord.Message):
         for attachment in message.attachments:
             if message.channel.id not in self.repost_cache:
                 return
@@ -188,17 +185,18 @@ class Pics:
             filename = attachment['filename']
             if not filename.lower().endswith(('.png', '.jpg', '.jpeg')):
                 return
+
             file_path = os.path.join('temp', filename)
+            url = attachment['url']
+            try:
+                await download_image_from_url(url, file_path)
+            except:  # TODO find what errors can this throw
+                continue
 
-            my_opener = urllib.request.build_opener()
-            my_opener.addheaders = [('User-Agent', self.user_agent)]
-            urllib.request.install_opener(my_opener)
-            urllib.request.urlretrieve(attachment['url'], file_path)
-
-            filename_noextension = filename.split('.')[0]
-            if filename_noextension not in channel_repost_cache:
-                channel_repost_cache[filename_noextension] = message
-                self.logger.info("Added picture " + filename_noextension + " to reposts in " + message.channel.name)
+            filename_no_extension = filename.split('.')[0]
+            if filename_no_extension not in channel_repost_cache:
+                channel_repost_cache[filename_no_extension] = message
+                self.logger.info(f"Added picture {filename_no_extension} to reposts in {message.channel.name}")
 
             os.remove(file_path)
 
