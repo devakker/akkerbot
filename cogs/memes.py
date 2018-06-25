@@ -22,11 +22,7 @@ class Memes:
             await self.bot.say(f"That meme doesn't exist. Perhaps you should add it!")
             return
 
-        author:discord.Member = context.message.author
-        if author.id != '79555854818357248':
-            await self.bot.send_file(target_channel, file_path)
-        else:
-            await self.bot.send_file(target_channel, os.path.join('memes', 'humpgnome.png'))
+        await self.bot.send_file(target_channel, file_path)
 
     @commands.command(name='addmeme', pass_context=True)
     async def add(self, context, name):
