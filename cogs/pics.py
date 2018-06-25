@@ -173,8 +173,6 @@ class Pics:
                 break
         return number_of_images_posted
 
-    # TODO this could be placed in an utils file
-
     async def check_if_repost(self, message: discord.Message):
         for attachment in message.attachments:
             if message.channel.id not in self.repost_cache:
