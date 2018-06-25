@@ -46,27 +46,32 @@ class Pics:
     async def schedule_posting_from_reddit(self, context, which_subs, how_often_in_hours: float, how_many: int = 3):
         """Posts pictures from subreddits every x hours.
         You can use periods like 0.11 hours, but 0.1 is the minimum"""
-        await self.bot.say("I will post **" + str(how_many) + "** pictures from **r/" +
-                           which_subs + "** every **" + str(how_often_in_hours) + "** hours.")
+        author = context.message.author
+        channel_id = context.message.channel.id
+        if channel_id not in self.tasks:
+            self.tasks[channel_id] = {}
+
+        if author not in self.tasks[channel_id]:
+            self.tasks[channel_id][author] = []
+
+        maximum_tasks_per_user = 9
+        if len(self.tasks[channel_id][author]) > maximum_tasks_per_user:
+            await self.bot.say(f'You have exceeded the max amount of tasks you can set ({maximum_tasks_per_user}).')
+            return
 
         task = self.bot.loop.create_task(
             self.picture_posting_task(subreddits=which_subs, number_of_pictures_to_post=how_many,
                                       target_channel=context.message.channel,
                                       period_in_hours=how_often_in_hours))
-        task.owner = context.message.author
+        task.owner = author
         task.channel = context.message.channel
         task.subs = which_subs
         task.limit = how_many
         task.period = how_often_in_hours
 
-        channel_id = context.message.channel.id
-        if channel_id not in self.tasks:
-            self.tasks[channel_id] = {}
-
-        if task.owner not in self.tasks[channel_id]:
-            self.tasks[channel_id][task.owner] = []
-
         self.tasks[channel_id][task.owner].append(task)
+        await self.bot.say(
+            f"I will post **{how_many}** picture(s) from **r/{which_subs}** every **{how_often_in_hours}** hours.")
 
     @commands.command(name='mytasks', pass_context=True)
     async def list_users_running_tasks(self, context):
