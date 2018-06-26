@@ -43,11 +43,12 @@ class Memes:
                 await download_image_from_url(url, file_path)
             except:
                 await self.bot.say("Something is wrong with that meme :(")
+                return
 
             self.memes[name] = file_path
             await self.bot.say(f"Meme added as **{name}**.")
 
-    @commands.command(name= 'removememe', pass_context=True)
+    @commands.command(name='removememe', pass_context=True)
     async def remove(self, context, name):
         if name in self.memes:
             os.remove(self.memes[name])
